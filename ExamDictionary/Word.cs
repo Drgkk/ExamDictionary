@@ -26,5 +26,10 @@ namespace ExamDictionary
             Translations = new List<string>();
         }
 
+        public override string ToString()
+        {
+            return $"Word: {MainWord}\nTranslations: {string.Join(", ", Translations)}";
+        }
+
     }
 }

@@ -32,6 +32,7 @@ namespace ExamDictionary
                             dictionaries.Manipulate(choice);
                             break;
                         case 2:
+                            Console.WriteLine("Goodbye!");
                             return;
                             break;
 

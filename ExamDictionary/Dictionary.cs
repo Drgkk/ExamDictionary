@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Serialization;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -22,12 +23,14 @@ namespace ExamDictionary
             words = new List<Word>();
         }
 
-        public void AddWord()
+        public bool AddWord()
         {
-            Console.WriteLine("Enter a word to add definition for: ");
-            string? name = Console.ReadLine();
-            if(name == "")
+            Console.WriteLine("Enter a word to add definition for (type \\b to go back): ");
+            string? name = Console.ReadLine().ToLower();
+            if (name == "")
                 throw new Exception("Null Value!");
+            else if (name == "\\b")
+                return false;
 
             string[] q = (from w in words
                           select w.MainWord).ToArray();
@@ -38,10 +41,13 @@ namespace ExamDictionary
             }
 
             Word word = new Word(name);
-            Console.WriteLine("Write first definition of a word: ");
-            name = Console.ReadLine();
+            Console.WriteLine("Write first definition of a word (type \\b to go back): ");
+            name = Console.ReadLine().ToLower();
             if (name == "")
                 throw new Exception("Null Value!");
+            else if (name == "\\b")
+                return false;
+
             word.Translations.Add(name);
             string[] options = { "Add another definition", "Add another word", "Finish adding words" };
             int choice;
@@ -51,13 +57,15 @@ namespace ExamDictionary
                 switch (choice)
                 {
                     case 0:
-                        Console.WriteLine("Write new definition of a word: ");
-                        name = Console.ReadLine();
+                        Console.WriteLine("Write new definition of a word (type \\b to go back): ");
+                        name = Console.ReadLine().ToLower();
                         if (name == "")
                         {
                             Console.WriteLine("Null value!");
                             continue;
                         }
+                        if (name == "\\b")
+                            continue;
                         if (Array.IndexOf(word.Translations.ToArray(), name) != -1)
                         {
                             Console.WriteLine("Definition already exists!");
@@ -67,91 +75,82 @@ namespace ExamDictionary
                         break;
                     case 1:
                         words.Add(word);
-                        AddWord();
+                        return true;
                         break;
                     case 2:
                         words.Add(word);
-                        return;
+                        return false;
                         break;
                 }
             }
         }
 
-        public void AddWord(string wordUser)
+        public bool AddWord(string wordUser)
         {
             Word word = new Word(wordUser);
-            Console.WriteLine("Write first definition of a word: ");
-            string name = Console.ReadLine();
+            Console.WriteLine("Write first definition of a word (type \\b to go back): ");
+            string name = Console.ReadLine().ToLower();
             if (name == "")
                 throw new Exception("Null Value!");
+            else if (name == "\\b")
+                return false;
             word.Translations.Add(name);
-            string[] options = { "Add another definition", "Add another word", "Finish adding words" };
-            int choice;
-            while (true)
-            {
-                choice = Menu.ChooseItem(options, "Adding Word...", 5, 5);
-                switch (choice)
-                {
-                    case 0:
-                        Console.WriteLine("Write new definition of a word: ");
-                        name = Console.ReadLine();
-                        if (name == "")
-                        {
-                            Console.WriteLine("Null value!");
-                            continue;
-                        }
-                        if (Array.IndexOf(word.Translations.ToArray(), name) != -1)
-                        {
-                            Console.WriteLine("Definition already exists!");
-                            continue;
-                        }
-                        word.Translations.Add(name);
-                        break;
-                    case 1:
-                        words.Add(word);
-                        AddWord();
-                        break;
-                    case 2:
-                        words.Add(word);
-                        return;
-                        break;
-                }
-            }
+            words.Add(word);
+            return true;
         }
 
         public string[] GetWords()
         {
-            var q = from w in words
-                    select w.MainWord;
+            string[] q = (from w in words
+                    select w.MainWord).ToArray();
 
-            return q.ToArray();
+            return q;
         }
 
         public void ManipulateWord(string word)
         {
-            string[] options = {"Delete word", "Add Definiton", "Delete Definition" };
+            word = word.ToLower();
+
+            string[] q = (from w in words
+                          select w.MainWord.ToLower()).ToArray();
+
+            int index = Array.IndexOf(q, word);
+
+            string[] options = {"Delete word", "Change Word Name", "Show all definitions for the word" , "Add Definiton", "Delete Definition", "Change Definition Name", "Back" };
             int choice;
             while(true)
             {
                 try
                 {
-                    choice = Menu.ChooseItem(options, "Manipulate Word", 5, 5);
+                    choice = Menu.ChooseItem(options, $"Manipulate Word ({word})", 5, 5);
                     switch (choice)
                     {
                         case 0:
-                            string[] q = (from w in words
-                                          select w.MainWord).ToArray();
-
-                            words.Remove(words[Array.IndexOf(q, word)]);
-                            break;
+                            RemoveWord(word, index);
+                            return;
                         case 1:
-                            string[] q1 = (from w in words
-                                           select w.MainWord).ToArray();
-
-                            AddDefinition(Array.IndexOf(q1, word));
+                            ChangeWordName(ref word, index);
                             break;
                         case 2:
-
+                            ShowAllDefinitions(word, index);
+                            Console.WriteLine("Press any key to continue...");
+                            Console.ReadKey();
+                            break;
+                        case 3:
+                            AddDefinition(index);
+                            break;
+                        case 4:
+                            Console.WriteLine("Here are all definitions: ");
+                            ShowAllDefinitions(word, index);
+                            DeleteDefinition(word, index);
+                            break;
+                        case 5:
+                            Console.WriteLine("Here are all definitions: ");
+                            ShowAllDefinitions(word, index);
+                            ChangeDefinitionName(word, index);
+                            break;
+                        case 6:
+                            return;
                             break;
                     }
                 }
@@ -165,12 +164,48 @@ namespace ExamDictionary
             }
         }
 
+        private void RemoveWord(string word, int index)
+        {
+            words.Remove(words[index]);
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"Word: \"{word}\" succesfully deleted!\nPress any key to continue");
+            Console.ResetColor();
+            Console.ReadKey(true);
+        }
+
+        private void ChangeWordName(ref string word, int index)
+        {
+            Console.WriteLine("Write new name for word (type \\b to go back): ");
+            string newName = Console.ReadLine().ToLower();
+            if (newName == "")
+                throw new Exception("Null Value!");
+            else if (newName == "\\b")
+                return;
+            Console.WriteLine($"Word: \"{word}\" succesfully changed name to: \"{newName}\"");
+            word = newName;
+            words[index].MainWord = newName;
+            
+        }
+
+        private void ShowAllDefinitions(string word, int index)
+        {
+            Console.WriteLine($"Word: {word}");
+            string[] q2 = (words[index].Translations.Select(t => t.ToLower())).ToArray();
+
+
+
+            Console.WriteLine($"Definitions ({q2.Length}): {string.Join(", ", q2)}");
+            
+        }
+
         private void AddDefinition(int index)
         {
-            Console.WriteLine("Add definition of a word: ");
-            string name = Console.ReadLine();
+            Console.WriteLine("Add definition of a word (type \\b to go back): ");
+            string name = Console.ReadLine().ToLower();
             if (name == "")
                 throw new Exception("Null Value!");
+            else if (name == "\\b")
+                return;
 
             if (Array.IndexOf(words[index].Translations.ToArray(), name) != -1)
             {
@@ -186,13 +221,15 @@ namespace ExamDictionary
                 switch (choice)
                 {
                     case 0:
-                        Console.WriteLine("Write new definition of a word: ");
-                        name = Console.ReadLine();
+                        Console.WriteLine("Write new definition of a word (type \\b to go back): ");
+                        name = Console.ReadLine().ToLower();
                         if (name == "")
                         {
                             Console.WriteLine("Null value!");
                             continue;
                         }
+                        if (name == "\\b")
+                            continue;
                         if (Array.IndexOf(words[index].Translations.ToArray(), name) != -1)
                         {
                             Console.WriteLine("Definition already exists!");
@@ -200,12 +237,93 @@ namespace ExamDictionary
                         }
                         words[index].Translations.Add(name);
                         break;
-                    case 2:
+                    case 1:
                         return;
                         break;
                 }
 
             }
         }
+
+        private void DeleteDefinition(string word, int index)
+        {
+            if(words[index].Translations.Count == 1)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Can't delete the last definition for the word: \"{word}\"!\nPress any key to continue");
+                Console.ResetColor();
+                Console.ReadKey(true);
+                return;
+            }
+            Console.WriteLine("Write a definition you want to delete (type \\b to go back): ");
+            string name = Console.ReadLine().ToLower();
+            if (name == "")
+                throw new Exception("Null Value!");
+            else if (name == "\\b")
+                return;
+
+            if (Array.IndexOf(words[index].Translations.ToArray(), name) != -1)
+            {
+                words[index].Translations.Remove(name);
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"Definition succesfully deleted for word: \"{word}\"!\nPress any key to continue");
+                Console.ResetColor();
+                Console.ReadKey(true);
+                return;
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"This definition does not exist for the word: \"{word}\"!\nPress any key to continue");
+                Console.ResetColor();
+                Console.ReadKey(true);
+                return;
+            }
+
+        }
+
+        private void ChangeDefinitionName(string word, int index)
+        {
+            Console.WriteLine("Write definition name you want to change (type \\b to go back): ");
+            string def = Console.ReadLine().ToLower();
+            if (def == "")
+                throw new Exception("Null Value!");
+            else if (def == "\\b")
+                return;
+            if (Array.IndexOf(words[index].Translations.ToArray(), def) == -1)
+            {
+                throw new Exception($"No definition {def} found!");
+            }
+            Console.WriteLine($"Write new name for definition ({def}) (type \\b to go back): ");
+            string newName = Console.ReadLine().ToLower();
+            if (newName == "")
+                throw new Exception("Null Value!");
+            else if (newName == "\\b")
+                return;
+
+            if (Array.IndexOf(words[index].Translations.ToArray(), newName) != -1)
+            {
+                throw new Exception("Definition already exists!");
+            }
+
+            Console.WriteLine($"Definition: \"{def}\" succesfully changed name to: \"{newName}\"");
+            words[index].Translations[Array.IndexOf(words[index].Translations.ToArray(), def)] = newName;
+        }
+
+        public Word GetWordByIndex(int index)
+        {
+            return words[index];
+        }
+
+        public void Save()
+        {
+            JsonISerializableContract jsonISerializableContract = new JsonISerializableContract();
+        }
+
+        public void Load()
+        {
+
+        }
+
     }
 }
