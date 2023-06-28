@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -116,7 +117,7 @@ namespace ExamDictionary
 
             int index = Array.IndexOf(q, word);
 
-            string[] options = {"Delete word", "Change Word Name", "Show all definitions for the word" , "Add Definiton", "Delete Definition", "Change Definition Name", "Back" };
+            string[] options = {"Delete word", "Change Word Name", "Show all definitions for the word" , "Add Definiton", "Delete Definition", "Change Definition Name", "Export word to a .txt file", "Back" };
             int choice;
             while(true)
             {
@@ -150,6 +151,13 @@ namespace ExamDictionary
                             ChangeDefinitionName(word, index);
                             break;
                         case 6:
+                            words[index].ExportToATxtFile();
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine($"Word \"{word}\" succesfully exported to a txt file: \"{words[index].MainWord}.txt\"\nPress any key to continue...");
+                            Console.ResetColor();
+                            Console.ReadKey();
+                            break;
+                        case 7:
                             return;
                             break;
                     }
@@ -317,13 +325,15 @@ namespace ExamDictionary
 
         public void Save()
         {
-            JsonISerializableContract jsonISerializableContract = new JsonISerializableContract();
+            DataContractJsonSerializer dataContractJsonSerializer = new DataContractJsonSerializer(typeof(Dictionary));
+            using (var file = File.Create($"{Name}SaveFile.json"))
+            {
+                dataContractJsonSerializer.WriteObject(file, this);
+            }
+
         }
 
-        public void Load()
-        {
-
-        }
+        
 
     }
 }

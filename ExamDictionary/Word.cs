@@ -31,5 +31,16 @@ namespace ExamDictionary
             return $"Word: {MainWord}\nTranslations: {string.Join(", ", Translations)}";
         }
 
+        public void ExportToATxtFile()
+        {
+            using (FileStream fs = File.Create($"{MainWord}.txt"))
+            {
+                using (StreamWriter sw = new StreamWriter(fs))
+                {
+                    sw.WriteLine($"Word: {MainWord}\nTranslations: {string.Join(", ", Translations)}");
+                }
+            }
+        }
+
     }
 }

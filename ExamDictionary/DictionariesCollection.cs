@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -55,7 +56,7 @@ namespace ExamDictionary
 
         public void Manipulate(int index)
         {
-            string[] options = { "Search a word", "Add a word to dictionary", "Manipulate certain word", "Return" };
+            string[] options = { "Search a word", "Add a word to dictionary", "Manipulate certain word", "Save", "Return" };
             int choice;
             while(true)
             {
@@ -74,6 +75,13 @@ namespace ExamDictionary
                             ManipulateCertainWord(index);
                             break;
                         case 3:
+                            dictionaries[index].Save();
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine($"Dictionary \"{dictionaries[index].Name}\" succesfully saved!\nPress any key to continue");
+                            Console.ResetColor();
+                            Console.ReadKey(true);
+                            break;
+                        case 4:
                             return;
                             break;
                     }
@@ -131,7 +139,7 @@ namespace ExamDictionary
         private bool SearchAWord(int index)
         {
             Console.WriteLine("Enter a word to search for (type \\b to go back): ");
-            string word = Console.ReadLine();
+            string word = Console.ReadLine().ToLower();
             if (word == "")
                 throw new Exception("Null Value!");
 
@@ -174,5 +182,40 @@ namespace ExamDictionary
             }
         }
 
+        private void GetAllSaveFiles()
+        {
+            
+            //string exePath = Path.GetDirectoryName(Executab)
+        }
+
+        public void Load(string name)
+        {
+            Dictionary? dictionary;
+            DataContractJsonSerializer dataContractJsonSerializer = new DataContractJsonSerializer(typeof(Dictionary));
+            using (var file = File.OpenRead(name))
+            {
+                dictionary = dataContractJsonSerializer.ReadObject(file) as Dictionary;
+            }
+
+            string[] q = (from d in dictionaries
+                    select d.Name).ToArray();
+
+            if (Array.IndexOf(q, dictionary.Name) != -1)
+            {
+                dictionaries[Array.IndexOf(q, dictionary.Name)] = dictionary;
+                return;
+            }
+
+            dictionaries.Add(dictionary);
+        }
+
+
+        public void SaveAll()
+        {
+            foreach(Dictionary dic in dictionaries)
+            {
+                dic.Save();
+            }
+        }
     }
 }
